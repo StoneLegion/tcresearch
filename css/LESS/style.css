@@ -145,7 +145,10 @@ h2 {
  * Search section styles
  */
 #search-container {
-  transition: margin-left 0.7s ease-in-out;
+  transition: left 0.7s ease-in-out, right 0.7s ease-in-out, margin-left 0.7s ease-in-out;
+}
+#search-container .layout-toggle {
+  margin-right: 10px;
 }
 #search-container form label {
   text-transform: uppercase;
@@ -278,6 +281,29 @@ h2 {
 }
 #search-results-wrapper::-webkit-scrollbar-thumb {
   background-color: #f06292;
+}
+#main.dock-left .search-result h2,
+#main.dock-left .search-result ul.aspect-list,
+#main.dock-left .search-result .search-info {
+  text-align: left;
+}
+#main.dock-left .search-result ul.aspect-list {
+  padding-left: 10px;
+  padding-right: 35px;
+}
+#main.dock-right .search-result h2,
+#main.dock-right .search-result ul.aspect-list,
+#main.dock-right .search-result .search-info {
+  text-align: right;
+}
+#main.dock-right .search-result ul.aspect-list {
+  padding-left: 35px;
+  padding-right: 10px;
+}
+#main.dock-center .search-result h2,
+#main.dock-center .search-result ul.aspect-list,
+#main.dock-center .search-result .search-info {
+  text-align: center;
 }
 .search-result {
   margin-top: -20px;

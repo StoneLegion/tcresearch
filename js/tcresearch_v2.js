@@ -20,10 +20,31 @@ var tcresearch = {
 		$search : $('#search-container'),
 		$searchResults: $('#search-results'),
 		$resultsWrapper: $('#search-results-wrapper'),
+		$main: $('#main'),
+		$layoutLeft: $('#layout-left'),
+		$layoutCenter: $('#layout-center'),
+		$layoutRight: $('#layout-right'),
 		$combBox:  $('#combination-box'),
 		$combBoxL: $('#combination-box #left'),
 		$combBoxR: $('#combination-box #right'),
 		$combBoxE: $('#combination-box #equals'),
+	},
+
+	layoutStorageKey: 'tcresearch.layout',
+	layout: 'center',
+	layoutClasses: {
+		left: {
+			search: '',
+			results: '',
+		},
+		center: {
+			search: 'col-lg-offset-4 col-md-offset-4 col-sm-offset-3',
+			results: '',
+		},
+		right: {
+			search: 'col-lg-push-8 col-md-push-8 col-sm-push-6',
+			results: 'col-lg-pull-4 col-md-pull-4 col-sm-pull-6',
+		}
 	},
 
 	html: {
@@ -53,6 +74,67 @@ var tcresearch = {
 		if ( ! (from in this.graph) )
 			this.graph[from] = [];
 		this.graph[from].push(to);
+	},
+
+	getStoredLayout: function () {
+		try {
+			var layout = window.localStorage && window.localStorage.getItem(this.layoutStorageKey);
+			if ( layout && this.layoutClasses[layout] )
+				return layout;
+		} catch (e) {}
+		return 'center';
+	},
+
+	storeLayout: function (layout) {
+		try {
+			if ( window.localStorage )
+				window.localStorage.setItem(this.layoutStorageKey, layout);
+		} catch (e) {}
+	},
+
+	clearLayoutClasses: function () {
+		this.c.$search.removeClass('col-lg-offset-4 col-md-offset-4 col-sm-offset-3 col-lg-push-8 col-md-push-8 col-sm-push-6');
+		this.c.$resultsWrapper.removeClass('col-lg-pull-4 col-md-pull-4 col-sm-pull-6');
+	},
+
+	applyLayout: function (layout) {
+		var targetLayout = this.layoutClasses[layout] ? layout : 'center';
+		var resultsVisible = this.c.$searchResults.children().length > 0;
+		var activeLayout = resultsVisible ? targetLayout : targetLayout;
+
+		this.layout = targetLayout;
+		this.clearLayoutClasses();
+		this.c.$main.removeClass('dock-left dock-center dock-right').addClass('dock-' + targetLayout);
+
+		if ( activeLayout === 'center' && ! resultsVisible ) {
+			this.c.$search.addClass(this.layoutClasses.center.search);
+		} else if ( activeLayout === 'right' ) {
+			this.c.$search.addClass(this.layoutClasses.right.search);
+			this.c.$resultsWrapper.addClass(this.layoutClasses.right.results);
+		}
+
+		this.c.$layoutLeft.toggleClass('active', targetLayout === 'left');
+		this.c.$layoutCenter.toggleClass('active', targetLayout === 'center');
+		this.c.$layoutRight.toggleClass('active', targetLayout === 'right');
+
+		this.storeLayout(targetLayout);
+	},
+
+	refreshLayout: function () {
+		this.clearLayoutClasses();
+		this.c.$main.removeClass('dock-left dock-center dock-right').addClass('dock-' + this.layout);
+
+		if ( this.layout === 'center' ) {
+			if ( ! this.c.$searchResults.children().length )
+				this.c.$search.addClass(this.layoutClasses.center.search);
+		} else if ( this.layout === 'right' ) {
+			this.c.$search.addClass(this.layoutClasses.right.search);
+			this.c.$resultsWrapper.addClass(this.layoutClasses.right.results);
+		}
+
+		this.c.$layoutLeft.toggleClass('active', this.layout === 'left');
+		this.c.$layoutCenter.toggleClass('active', this.layout === 'center');
+		this.c.$layoutRight.toggleClass('active', this.layout === 'right');
 	},
 
 	// Connects two aspects in the graph
@@ -356,7 +438,11 @@ var tcresearch = {
 			e.preventDefault();
 
 			if ( ! self.c.$searchResults.children().length ) {
-				self.c.$search.removeClass('col-lg-offset-4 col-md-offset-4 col-sm-offset-3');
+				self.clearLayoutClasses();
+				if ( self.layout === 'right' ) {
+					self.c.$search.addClass(self.layoutClasses.right.search);
+					self.c.$resultsWrapper.addClass(self.layoutClasses.right.results);
+				}
 				self.c.$resultsWrapper.fadeIn();
 				$('#close_results').fadeIn();
 
@@ -430,13 +516,13 @@ var tcresearch = {
 		$('body').on('click', 'a.close-result', function (e) {
 			e.preventDefault();
 
-			$(this)
+				$(this)
 				.parent()
 				.slideUp(400, function () {
 					this.remove();
 					
 					if ( ! self.c.$searchResults.children().length ){
-						self.c.$search.addClass('col-lg-offset-4 col-md-offset-4 col-sm-offset-3');
+						self.refreshLayout();
 						self.c.$resultsWrapper.fadeOut();
 						$('#close_results').fadeOut();
 					}
@@ -468,10 +554,25 @@ var tcresearch = {
 			$('.search-result').slideUp('400', function () {
 				$(this).remove();
 
-				self.c.$search.addClass('col-lg-offset-4 col-md-offset-4 col-sm-offset-3');
+				self.refreshLayout();
 				self.c.$resultsWrapper.fadeOut();
 				$('#close_results').fadeOut();
 			});
+		});
+
+		this.c.$layoutLeft.on('click', function (e) {
+			e.preventDefault();
+			self.applyLayout('left');
+		});
+
+		this.c.$layoutCenter.on('click', function (e) {
+			e.preventDefault();
+			self.applyLayout('center');
+		});
+
+		this.c.$layoutRight.on('click', function (e) {
+			e.preventDefault();
+			self.applyLayout('right');
 		});
 
 		var primaryAspects = {'fire':1, 'water':1, 'order':1, 'air':1, 'entropy':1, 'earth':1};
@@ -535,6 +636,7 @@ var tcresearch = {
 	init: function () {
 		this.setVersions();
 		this.whatchForViewChanges();
+		this.applyLayout(this.getStoredLayout());
 
 		this.resetAspects();
 	}
@@ -560,4 +662,3 @@ function ddDataSort (a, b) {
 function getWeight (aspect) {
 	return $('#avail #' + aspect).hasClass('unavail') ? 100 : 1;
 }
-
